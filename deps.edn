@@ -1,0 +1,50 @@
+{:paths ["src" "resources"]
+ :deps {org.clojure/clojure {:mvn/version "1.11.1"}
+        ;; app deps
+        org.clojure/tools.logging {:mvn/version "1.2.4"}
+        org.slf4j/slf4j-jdk14 {:mvn/version "2.0.10"}
+        http-kit/http-kit {:mvn/version "2.8.0-RC1"}
+        org.babashka/sci {:mvn/version "0.8.41"}
+        dev.onionpancakes/chassis {:mvn/version "1.0.365"}
+        #_#_org.scicloj/clay {:mvn/version "2-beta8"}
+        org.scicloj/kindly-advice {:mvn/version "1-beta1"}
+        org.scicloj/kind-portal {:mvn/version "1-beta1"}
+        #_#_org.crac/crac {:mvn/version "1.3.0"} 
+        #_#_com.github.clj-easy/graal-build-time {:mvn/version "1.0.5"}
+        #_#_datalevin/datalevin {:mvn/version "0.9.5"}
+
+        ;; internal SCI environment deps 
+        ;; explicitly include specialized versions and exclude others below to reduce image size
+        org.bytedeco/javacpp$linux-x86_64 {:mvn/version "1.5.10"}
+        org.bytedeco/javacpp {:mvn/version "1.5.10"}
+        org.bytedeco/arpack-ng$linux-x86_64 {:mvn/version "3.9.1-1.5.10"}
+        org.bytedeco/arpack-ng {:mvn/version "3.9.1-1.5.10"} 
+        org.bytedeco/openblas$linux-x86_64 {:mvn/version "0.3.26-1.5.10"}
+        org.bytedeco/openblas {:mvn/version "0.3.26-1.5.10"}
+
+        org.scicloj/noj {:mvn/version "1-alpha34"
+                         :exclusions [com.github.haifengl/smile-mkl
+                                      org.bytedeco/javacpp
+                                      org.bytedeco/arpack-ng 
+                                      org.bytedeco/openblas]}
+        #_#_com.cnuernber/charred {:mvn/version "1.034"}
+        #_#_com.techascent/tmducken {:mvn/version "0.10.0-2"}
+        #_#_techascent/tech.ml.dataset {:mvn/version "7.029"}
+        #_#_scicloj/tablecloth {:mvn/version "7.029.2"}
+        #_#_com.github.seancorfield/next.jdbc {:mvn/version "1.3.925"}
+        #_#_com.mysql/mysql-connector-j {:mvn/version "8.3.0"}
+        #_#_org.postgresql/postgresql {:mvn/version "42.7.3"}
+        #_#_com.microsoft.sqlserver/mssql-jdbc {:mvn/version "12.6.1.jre11"}
+        #_#_org.xerial/sqlite-jdbc {:mvn/version "3.45.3.0"}}
+ :aliases
+ {:run-m {:main-opts ["-m" "casselc.playdoh"]}
+  :run-x {:ns-default casselc.playdoh
+          :exec-fn greet
+          :exec-args {:name "Clojure"}}
+  :build {:deps {io.github.clojure/tools.build
+                 {:git/tag "v0.9.2" :git/sha "fe6b140"}}
+          :ns-default build}
+  :test {:extra-paths ["test"]
+         :extra-deps {org.clojure/test.check {:mvn/version "1.1.1"}
+                      io.github.cognitect-labs/test-runner
+                      {:git/tag "v0.5.1" :git/sha "dfb30dd"}}} :neil {:project {:name io.github.casselc/playdoh}}}}

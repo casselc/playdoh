@@ -1,0 +1,7 @@
+(ns casselc.playdoh-test
+  (:require [clojure.test :refer :all]
+            [casselc.playdoh :refer :all]))
+
+(deftest a-test
+  (testing "FIXME, I fail."
+    (is (= 0 1))))
