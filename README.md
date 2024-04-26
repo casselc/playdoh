@@ -6,7 +6,7 @@ WIP on Graal native-image build as well as CRaC
 
 ## Usage
 
-A buggy demo might be available at [https://playdoh.fly.dev/] (https://playdoh.fly.dev)
+A buggy demo might be available at [https://playdoh.fly.dev/](https://playdoh.fly.dev)
 
 ## License
 
