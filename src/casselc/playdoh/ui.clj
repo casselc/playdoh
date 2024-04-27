@@ -155,11 +155,11 @@
         [:ul.flex.flex-col.gap-2.v-full.p-1
          notebook-cells
          (add-row-button)]
-        [:script
+        #_[:script
          {:type "text/javascript"
           :src
           "https://microsoft.github.io/monaco-editor/node_modules/monaco-editor/min/vs/loader.js"}]
-        [:script
+        #_[:script
          "const opts = {
         language: 'clojure',
         lineNumbers: 'off',
