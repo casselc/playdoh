@@ -142,6 +142,7 @@
      [c/doctype-html5
       [:html
        [:head
+        [:link {:rel "icon" :href "data:,"}]
         [:meta {:charset "UTF-8"}]
         [:meta {:http-equiv "Content-Type" :content "text/html"}]
         [:title "Playdoh - a Clojure data playground"]
