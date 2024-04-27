@@ -1,9 +1,10 @@
 (ns casselc.playdoh.impl.clay.prepare
   (:require
+   [clojure.tools.logging.readable :as logr]
    [clojure.walk]
    [clojure.string :as string]
    [charred.api :as charred]
-   #_[nextjournal.markdown :as md]
+   [nextjournal.markdown :as md]
    [scicloj.kindly-advice.v1.api :as kindly-advice]
    [casselc.playdoh.impl.clay.util.claywalk :as claywalk]
    [casselc.playdoh.impl.clay.item :as item]
@@ -66,7 +67,7 @@
   (-> (or hiccup
           (some->> html
                    (vector :div))
-          #_(when md
+          (when md
             (if (and (vector? format)
                      (-> format first (= :quarto))
                      inside-a-table)
@@ -109,6 +110,7 @@
 (defn prepare [{:as context
                 :keys [value]}
                {:keys [fallback-preparer]}]
+  (logr/info "Prepare" value "with" context)
   (let [complete-context (-> context
                              (update :kindly/options
                                      deep-merge
@@ -116,6 +118,7 @@
         kind (-> complete-context
                  advise-if-needed
                  :kind)]
+    (logr/info "Will prepare a" kind)
     (case kind
       :kind/fragment (->> value
                           ;; splice the fragment
@@ -135,10 +138,10 @@
       (when-let [preparer (-> kind
                               (@*kind->preparer)
                               (or fallback-preparer))]
-        [(-> complete-context
-             preparer
-             (update :hiccup limit-hiccup-height complete-context)
-             (update :md limit-md-height complete-context))]))))
+        (logr/spyf "Prepare result:\n%s\n" [(-> complete-context
+                                                preparer
+                                                (update :hiccup limit-hiccup-height complete-context)
+                                                (update :md limit-md-height complete-context))])))))
 
 (defn prepare-or-pprint [context]
   (prepare context {:fallback-preparer
@@ -228,11 +231,13 @@
 (add-preparer-from-value-fn!
  :kind/dataset
  (fn [v]
-   (-> v
-       println
-       with-out-str
-       item/md
-       (merge {:item-class "clay-dataset"}))))
+   (logr/info "Creating a dataset from:" v)
+   (logr/spyf :info "Dataset result:\n%s\n"
+              (-> v
+                  println
+                  with-out-str
+                  item/md
+                  (merge {:item-class "clay-dataset"})))))
 
 (add-preparer-from-value-fn!
  :kind/smile-model
@@ -407,7 +412,7 @@
  :kind/html
  #'item/html)
 
-#_(add-preparer-from-value-fn!
+(add-preparer-from-value-fn!
  :kind/portal
  (fn [value]
    (-> value

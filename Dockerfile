@@ -1,5 +1,10 @@
-FROM clojure:temurin-21-tools-deps-alpine AS clj-builder
-WORKDIR /opt
+FROM eclipse-temurin:21-jdk-alpine AS runtime-build
+RUN apk add --no-cache binutils
+WORKDIR /runtime-build
+RUN jlink --no-header-files --no-man-pages --compress=zip-9 --strip-debug --add-modules java.base,java.logging,jdk.unsupported,java.sql,java.desktop --output runtime
+
+FROM clojure:temurin-21-tools-deps-alpine AS app-build
+WORKDIR /app-build
 
 ADD deps.edn deps.edn
 RUN echo Downloading Clojure build deps && clojure -Srepro -Stree -T:build
@@ -9,26 +14,30 @@ COPY src src/
 COPY build.clj .
 RUN clojure -Srepro -Sverbose -T:build ci :uber-file target/app.jar
 
-FROM ghcr.io/graalvm/native-image-community:21-muslib AS native-builder
-RUN useradd --uid 10001 --no-create-home --home "/opt" -c "" --shell "/sbin/nologin" app
-WORKDIR /opt
-COPY --link --from=clj-builder /opt/target/app.jar .
-RUN native-image -jar app.jar -o app --features=clj_easy.graal_build_time.InitClojureClasses --no-fallback --gc=serial -R:MinHeapSize=128m -R:MaxHeapSize=768m --strict-image-heap --static --libc=musl -march=native \
-    -J-Dclojure.spec.skip.macros=true -J-Dclojure.compiler.direct-linking=true -J-Dtech.v3.datatype.graal-native=true  \
-    -H:+ReportExceptionStackTraces --report-unsupported-elements-at-runtime --install-exit-handlers \
-    --enable-http --verbose --initialize-at-build-time=org.slf4j.jul.JDK14LoggerFactory --initialize-at-run-time=casselc.playdoh.ui --allow-incomplete-classpath  && rm app.jar
+FROM alpine:3.19.1 AS app-base
+SHELL ["/bin/sh", "-o", "pipefail", "-c"]
+ENV APP_USER "app"
+ENV APP_DIR "/${APP_USER}"
+ENV DATA_DIR "${APP_DIR}/data"
 
-FROM scratch AS app
+RUN adduser -s /bin/true -u 1000 -D -h $APP_DIR $APP_USER \
+  && mkdir "$DATA_DIR" \
+  && chown -R "$APP_USER" "$APP_DIR" \
+  && chmod 700 "$APP_DIR" "$DATA_DIR"
 
-EXPOSE 8090
+RUN apk add --no-cache ca-certificates
+
+WORKDIR ${APP_DIR}
 
 ENV PLAYDOH_PORT=8090
 ENV MALLOC_ARENA_MAX=2
+ENV JAVA_HOME="${APP_DIR}/runtime"
 ENV JDK_JAVA_OPTIONS="-XshowSettings:system -XX:+UseContainerSupport -Xmx768m -Xms128m"
-ENV JAVA OPTS="-Dclojure.tools.logging.factory=clojure.tools.logging.impl/log4j2-factory"
+ENV JAVA_OPTS="-Dclojure.tools.logging.factory=clojure.tools.logging.impl/log4j2-factory"
 
-COPY --link --from=native-builder /etc/passwd /etc/passwd
-COPY --link --from=native-builder --chown=10001 /opt /
-USER app
+FROM app-base AS app
 
-CMD ["/app", "start"] 
+COPY --link --from=runtime-build /runtime-build/runtime runtime
+COPY --link --from=app-build /app-build/target/app.jar .
+
+CMD [ "runtime/bin/java", "-jar", "app.jar", "start" ]

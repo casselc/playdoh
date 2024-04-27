@@ -11,7 +11,7 @@
 
 (set! *warn-on-reflection* true)
 
-(def kinds (delay (logr/info "kinds was forced") (into {} (requiring-resolve 'casselc.playdoh.ui/kinds))))
+(def kinds (into {} ui/kinds) #_(delay (logr/info "kinds was forced") (into {} (requiring-resolve 'casselc.playdoh.ui/kinds))))
 
 (def sessions (atom {}))
 
@@ -67,8 +67,8 @@
 (defn new-session!
   []
   (let [id (str (random-uuid))]
-    (logr/trace "Creating new session with id:" id)
-    (reset-session! id)
+    (logr/info "Creating new session with id:" id)
+    (logr/spyf :info "\nSESSION:\n%s\n" (reset-session! id))
     id))
 
 (defn get-session-id
@@ -97,50 +97,46 @@
   [{:keys [headers] :as _req}]
   (parse-boolean (headers "hx-request" "false")))
 
-(let [index-page ui/index-page
-      result-pane ui/result-pane
-      notebook-cell ui/notebook-cell
-      add-row-button  ui/add-row-button]
-  (defn router
-    [{:keys [request-method uri]
-      :as req}]
-    (try
-      (let [session-id (get-session-id req)
-            {:keys [cell-list cells context]} (@sessions session-id)]
-        (case [request-method uri]
-          ([:get "/"]
-           [:get "/index.html"]) {:status 200
-                                  :headers {"Content-Type" "text/html"
-                                            "Set-Cookie" (session-cookie-header session-id)}
-                                  :body (c/html (index-page cell-list  cells))}
-          [:post "/cell"] (let [{:keys [cells cell-list]} (new-cell! session-id)]
-                            (if (is-htmx? req)
-                              (let [last-cell (cells (last cell-list))]
-                                {:status 200
-                                 :headers {"Content-Type" "text/html"}
-                                 :body (c/html [(notebook-cell last-cell)
-                                                (add-row-button)])})
+(defn router
+  [{:keys [request-method uri]
+    :as req}]
+  (try
+    (let [session-id (get-session-id req)
+          {:keys [cell-list cells context]} (@sessions session-id)]
+      (case [request-method uri]
+        ([:get "/"]
+         [:get "/index.html"]) {:status 200
+                                :headers {"Content-Type" "text/html"
+                                          "Set-Cookie" (session-cookie-header session-id)}
+                                :body (c/html (ui/index-page cell-list  cells))}
+        [:post "/cell"] (let [{:keys [cells cell-list]} (new-cell! session-id)]
+                          (if (is-htmx? req)
+                            (let [last-cell (cells (last cell-list))]
                               {:status 200
                                :headers {"Content-Type" "text/html"}
-                               :body (c/html (index-page cell-list  cells))}))
-          [:post "/evaluate"] (let [{:strs [id text kind] :as all} (get-form-values req)
-                                    result (sci/evaluate-in-context context text)
-                                    new-cell {:id id :text text :result result :kind (@kinds kind)}
-                                    {:keys [cell-list cells]} (update-cell! session-id new-cell)]
-                                (if (is-htmx? req)
-                                  {:status 200
-                                   :headers {"Content-Type" "text/html"}
-                                   :body (c/html (result-pane new-cell))}
-                                  {:status 200
-                                   :headers {"Content-Type" "text/html"}
-                                   :body (c/html (index-page cell-list cells))}))
-          {:status 404
-           :body (str uri " not found")}))
-      (catch Exception e
-        (logr/error e "Error processing request:\n" req)
-        {:status 500
-         :headers {"Content-Type" "text/plain"}
-         :body (str "Oops, something broke:\n" (ex-message e))}))))
+                               :body (c/html [(ui/notebook-cell last-cell)
+                                              (ui/add-row-button)])})
+                            {:status 200
+                             :headers {"Content-Type" "text/html"}
+                             :body (c/html (ui/index-page cell-list  cells))}))
+        [:post "/evaluate"] (let [{:strs [id text kind] :as all} (get-form-values req)
+                                  result (sci/evaluate-in-context context text)
+                                  new-cell {:id id :text text :result result :kind (kinds kind)}
+                                  {:keys [cell-list cells]} (update-cell! session-id new-cell)]
+                              (if (is-htmx? req)
+                                {:status 200
+                                 :headers {"Content-Type" "text/html"}
+                                 :body (c/html (ui/result-pane new-cell))}
+                                {:status 200
+                                 :headers {"Content-Type" "text/html"}
+                                 :body (c/html (ui/index-page cell-list cells))}))
+        {:status 404
+         :body (str uri " not found")}))
+    (catch Exception e
+      (logr/error e "Error processing request:\n" req)
+      {:status 500
+       :headers {"Content-Type" "text/plain"}
+       :body (str "Oops, something broke:\n" (ex-message e))})))
 
 (def running-server (atom nil))
 
@@ -148,7 +144,8 @@
   [port] 
   (if-let [server @running-server]
     server
-    (let [server (reset! running-server (http/run-server #'router {:port port :legacy-return-value? false}))]
+    (let [_ (future (sci/init))
+          server (reset! running-server (http/run-server #'router {:port port :legacy-return-value? false}))]
       server)))
 
 (defn stop!

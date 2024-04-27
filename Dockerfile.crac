@@ -2,75 +2,65 @@
 
 # JRE/JDK image with CRaC
 
-ARG BASE_IMAGE="bellsoft/alpaquita-linux-base:stream-musl"
-FROM "$BASE_IMAGE" AS crac
-
-# 17 and 21 are supported
-ARG JAVA_RELEASE="21"
-# jre, jdk
-ARG BUNDLE_TYPE="jre"
-# Whether to install Class Data Sharing archives
-ARG CDS="no"
-# Whether to remove APK tools from the image
-ARG REMOVE_APK_TOOLS="no"
-
-ARG MAINTAINER=""
-ARG DESCRIPTION=""
-
-LABEL maintainer="$MAINTAINER"
-LABEL org.opencontainers.image.authors="$MAINTAINER"
-LABEL org.opencontainers.image.description="$DESCRIPTION"
+FROM bellsoft/alpaquita-linux-base:stream-musl AS crac-base
 
 ENV LANG=en_US.UTF-8 LANGUAGE=en_US:en
-ENV JAVA_HOME="/usr/lib/jvm/liberica${JAVA_RELEASE}-crac"
+ENV JAVA_HOME="/usr/lib/jvm/liberica21-crac"
 
-RUN \
-    set -e; command set -o pipefail; \
-    case "$JAVA_RELEASE" in \
-        17|21) ;; \
-        *) \
-            echo -n "Invalid JAVA_RELEASE: '${JAVA_RELEASE}'. "; \
-            echo "Only '17' and '21' are supported."; \
-            exit 1; \
-            ;; \
-    esac; \
-    case "$BUNDLE_TYPE" in \
-        jre|jdk) ;; \
-        *) \
-            echo -n "Invalid BUNDLE_TYPE: '${BUNDLE_TYPE}'. "; \
-            echo "Only 'jre' and 'jdk' are supported."; \
-            exit 1; \
-            ;; \
-    esac; \
-    case "$CDS" in \
-        yes|no) ;; \
-        *) \
-            echo "Invalid CDS: '${CDS}'. "; \
-            echo "Only 'yes' and 'no' are supported."; \
-            exit 1; \
-            ;; \
-    esac; \
-    case "$REMOVE_APK_TOOLS" in \
-        yes|no) ;; \
-        *) \
-            echo "Invalid REMOVE_APK_TOOLS: '${REMOVE_APK_TOOLS}'. "; \
-            echo "Only 'yes' and 'no' are supported."; \
-            exit 1; \
-            ;; \
-    esac; \
-    apk add --no-cache "liberica${JAVA_RELEASE}-crac-${BUNDLE_TYPE}-no-deps"; \
-    if [ "$CDS" = "yes" ]; then \
-        apk add --no-cache "liberica${JAVA_RELEASE}-crac-jre-cds"; \
-    fi; \
-    if [ "$REMOVE_APK_TOOLS" = "yes" ]; then \
-        apk del --no-cache apk-tools; \
-    fi
+RUN set -e; command set -o pipefail; \
+    apk add --no-cache binutils curl bash git liberica21-crac-jdk liberica21-crac-jmods liberica21-crac-jre-cds
 
-FROM crac AS jlink
+FROM crac-base AS runtime-build
 WORKDIR /runtime-build
-RUN jlink --no-header-files --no-man-pages --compress=zip-9 --strip-debug --add-modules java.base,java.logging,jdk.unsupported,java.sql,java.desktop --output .
+RUN jlink --no-header-files --no-man-pages --compress=zip-9 --strip-debug --add-modules java.base,java.logging,jdk.unsupported,java.sql,java.desktop --output runtime
 
-FROM crac AS clojure
+FROM crac-base AS clojure-builder
+RUN curl -L -O https://github.com/clojure/brew-install/releases/latest/download/linux-install.sh && chmod +x linux-install.sh && bash ./linux-install.sh && rm ./linux-install.sh
+
+FROM clojure-builder AS app-build
 WORKDIR /app-build
-RUN curl -L -O https://github.com/clojure/brew-install/releases/latest/download/linux-install.sh && bash ./linux-install-sh --prefix .clojure && rm ./linux-install.sh
 
+ADD deps.edn deps.edn
+RUN echo Downloading Clojure build deps && clojure -Srepro -Stree -T:build
+RUN echo Downloading Clojure app deps && clojure -Srepro -Stree 
+
+COPY src src/
+COPY build.clj .
+RUN clojure -Srepro -Sverbose -T:build ci :uber-file target/app.jar
+
+FROM alpine:3.19.1 AS app-base
+SHELL ["/bin/sh", "-o", "pipefail", "-c"]
+ENV APP_USER "app"
+ENV APP_DIR "/${APP_USER}"
+ENV DATA_DIR "${APP_DIR}/data"
+
+RUN adduser -s /bin/true -u 1000 -D -h $APP_DIR $APP_USER \
+  && mkdir "$DATA_DIR" \
+  && chown -R "$APP_USER" "$APP_DIR" \
+  && chmod 700 "$APP_DIR" "$DATA_DIR"
+
+RUN set -e; command set -o pipefail; \
+    apk add --no-cache ca-certificates; \
+    apk add --no-cache criu --repository=http://dl-cdn.alpinelinux.org/alpine/edge/testing/; 
+
+WORKDIR ${APP_DIR}
+
+ENV PLAYDOH_PORT=8090
+ENV MALLOC_ARENA_MAX=2
+ENV JAVA_HOME="${APP_DIR}/runtime"
+ENV JDK_JAVA_OPTIONS="-XshowSettings:system -XX:+UseContainerSupport -XX:CRaCCheckpointTo=${DATA_DIR} -Xmx768m -Xms128m"
+ENV JAVA_OPTS="-Dclojure.tools.logging.factory=clojure.tools.logging.impl/log4j2-factory"
+
+FROM app-base AS app-snapshot
+
+COPY --link --from=runtime-build /runtime-build/runtime runtime
+COPY --link --from=app-build /app-build/target/app.jar .
+
+FROM app-snapshot AS app-snapshot2
+RUN runtime/bin/java -jar app.jar crac
+
+FROM app-base AS app
+
+COPY --link --from=app-snapshot2 ${APP_DIR} ${APP_DIR}
+
+CMD [ "runtime/bin/java", , "-jar", "app.jar" ]

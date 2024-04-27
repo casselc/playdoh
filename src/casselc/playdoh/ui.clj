@@ -17,7 +17,7 @@
   (try
     (-> {:value value
          :kind kind}
-        prepare/prepare-or-pprint
+        prepare/prepare-or-pprint 
         first
         (prepare/item->hiccup {}))
     (catch Exception e
@@ -87,7 +87,7 @@
 
 (defn result-pane
   [{:keys [result kind]}]
-  (logr/trace "Creating result of kind" kind "for" result)
+  (logr/info "Creating result of kind" kind "for" result)
   (let [result-hiccup (value->hiccup result kind)]
     (cc/compile
      [:div.bg-gray-100.h-full
@@ -132,7 +132,7 @@
       {:type "submit"
        :name "type"
        :value "clojure"
-       :class (bg-color)}
+       :class [(bg-color)]}
       "Add Row"]]]))
 
 (defn index-page

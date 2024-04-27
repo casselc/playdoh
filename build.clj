@@ -30,7 +30,7 @@
   #_(test opts)
   (b/delete {:path "target"})
   (let [opts (update (uber-opts opts)
-                     :ns-compile conj 'casselc.playdoh.ui 'casselc.playdoh.impl.sci-deps)]
+                     :ns-compile conj 'casselc.playdoh.impl.sci-deps)]
     (println "\nCopying source...")
     (b/copy-dir {:src-dirs ["resources" "src"] :target-dir class-dir})
     (println (str "\nCompiling " main "..."))
