@@ -23,6 +23,10 @@
   [^String session-id]
   (str session-cookie-name "=" session-id "; Secure; HttpOnly; Path=/; SameSite=Strict"))
 
+(defn reset-cookie-header
+  []
+  (str session-cookie-name "=; Secure; HttpOnly; Path=/; SameSite=Strict; Max-Age=0"))
+
 (defn empty-cell
   []
   {:id (str (random-uuid))
@@ -103,35 +107,39 @@
   (try
     (let [session-id (get-session-id req)
           {:keys [cell-list cells context]} (@sessions session-id)]
-      (case [request-method uri]
-        ([:get "/"]
-         [:get "/index.html"]) {:status 200
-                                :headers {"Content-Type" "text/html"
-                                          "Set-Cookie" (session-cookie-header session-id)}
-                                :body (c/html (ui/index-page cell-list  cells))}
-        [:post "/cell"] (let [{:keys [cells cell-list]} (new-cell! session-id)]
-                          (if (is-htmx? req)
-                            (let [last-cell (cells (last cell-list))]
+      (if context
+        (case [request-method uri]
+          ([:get "/"]
+           [:get "/index.html"]) {:status 200
+                                  :headers {"Content-Type" "text/html"
+                                            "Set-Cookie" (session-cookie-header session-id)}
+                                  :body (c/html (ui/index-page cell-list  cells))}
+          [:post "/cell"] (let [{:keys [cells cell-list]} (new-cell! session-id)]
+                            (if (is-htmx? req)
+                              (let [last-cell (cells (last cell-list))]
+                                {:status 200
+                                 :headers {"Content-Type" "text/html"}
+                                 :body (c/html [(ui/notebook-cell last-cell)
+                                                (ui/add-row-button)])})
                               {:status 200
                                :headers {"Content-Type" "text/html"}
-                               :body (c/html [(ui/notebook-cell last-cell)
-                                              (ui/add-row-button)])})
-                            {:status 200
-                             :headers {"Content-Type" "text/html"}
-                             :body (c/html (ui/index-page cell-list  cells))}))
-        [:post "/evaluate"] (let [{:strs [id text kind] :as all} (get-form-values req)
-                                  result (sci/evaluate-in-context context text)
-                                  new-cell {:id id :text text :result result :kind (kinds kind)}
-                                  {:keys [cell-list cells]} (update-cell! session-id new-cell)]
-                              (if (is-htmx? req)
-                                {:status 200
-                                 :headers {"Content-Type" "text/html"}
-                                 :body (c/html (ui/result-pane new-cell))}
-                                {:status 200
-                                 :headers {"Content-Type" "text/html"}
-                                 :body (c/html (ui/index-page cell-list cells))}))
-        {:status 404
-         :body (str uri " not found")}))
+                               :body (c/html (ui/index-page cell-list  cells))}))
+          [:post "/evaluate"] (let [{:strs [id text kind] :as all} (get-form-values req)
+                                    result (sci/evaluate-in-context context text)
+                                    new-cell {:id id :text text :result result :kind (kinds kind)}
+                                    {:keys [cell-list cells]} (update-cell! session-id new-cell)]
+                                (if (is-htmx? req)
+                                  {:status 200
+                                   :headers {"Content-Type" "text/html"}
+                                   :body (c/html (ui/result-pane new-cell))}
+                                  {:status 200
+                                   :headers {"Content-Type" "text/html"}
+                                   :body (c/html (ui/index-page cell-list cells))}))
+          {:status 404
+           :body (str uri " not found")})
+        {:status 303
+         :headers {"Location" "/"
+                   "Set-Cookie" (reset-cookie-header)}}))
     (catch Exception e
       (logr/error e "Error processing request:\n" req)
       {:status 500
@@ -141,7 +149,7 @@
 (def running-server (atom nil))
 
 (defn start!
-  [port] 
+  [port]
   (if-let [server @running-server]
     server
     (let [_ (future (sci/init))
