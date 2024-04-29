@@ -17,7 +17,7 @@
   (try
     (-> {:value value
          :kind kind}
-        prepare/prepare-or-pprint 
+        prepare/prepare-or-pprint
         first
         (prepare/item->hiccup {}))
     (catch Exception e
@@ -151,17 +151,46 @@
           :integrity
           "sha384-ujb1lZYygJmzgSwoxRggbCHcjc0rB2XoQrxeTUQyRjrOnlCoYta87iKBWq3EsdM2"
           :crossorigin "anonymous"}]
-        [:script {:src "https://cdn.tailwindcss.com?plugins=forms"}]]
+        [:link {:rel "stylesheet" :href "https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css"}]
+        [:link {:rel "stylesheet" :href "https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css"}]
+        [:link {:rel "stylesheet" :href "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"}] 
+        [:script {:src "https://cdn.tailwindcss.com?plugins=forms" :async true}]
+        [:script {:src "https://cdn.jsdelivr.net/npm/vega@5.25.0" :async true}]
+        [:script {:src "https://cdn.jsdelivr.net/npm/vega-lite@5.16.3" :async true}]
+        [:script {:src "https://cdn.jsdelivr.net/npm/vega-embed@6.22.2" :async true}]
+        [:script {:src "https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js :async true"}]
+        [:script {:src "https://cdn.jsdelivr.net/npm/echarts@5.4.1/dist/echarts.min.js" :async true}]
+        [:script {:src "https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.23.0/cytoscape.min.js" :async true}]
+        [:script {:src "https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.20.0/plotly.min.js" :async true}]
+        [:script {:src "https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js" :async true}]
+        [:script {:src "https://cdnjs.cloudflare.com/ajax/libs/3Dmol/1.5.3/3Dmol.min.js" :async true}]
+        [:script {:src "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" :async true}]
+        [:script {:src "https://cdn.jsdelivr.net/npm/leaflet-providers@2.0.0/leaflet-providers.min.js" :async true}]
+        [:script {:src "https://unpkg.com/react@18/umd/react.production.min.js" :async true}]
+        [:script {:src "https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" :async true}]
+        [:script {:src "https://scicloj.github.io/scittle/js/scittle.js" :async true}]
+        [:script {:src "https://scicloj.github.io/scittle/js/scittle.cljs-ajax.js" :async true}]
+        [:script {:src "https://scicloj.github.io/scittle/js/scittle.reagent.js" :async true}]
+        [:script {:src "https://cdn.jsdelivr.net/npm/d3-require@1" :async true}]
+        [:script {:src "https://scicloj.github.io/scittle/js/scittle.tmdjs.js" :async true}]
+        [:script {:src "https://scicloj.github.io/scittle/js/scittle.emmy.js" :async true}]
+        [:script {:src "https://scicloj.github.io/scittle/js/scittle.mathbox.js" :async true}]
+        [:script {:src "https://cdn.jsdelivr.net/npm/d3@7" :async true}]
+        [:script {:src "https://code.jquery.com/jquery-3.6.0.min.js" :async true}]
+        [:script {:src "https://code.jquery.com/ui/1.13.1/jquery-ui.min.js" :async true}]
+        [:script {:src "https://code.highcharts.com/highcharts.js" :async true}]
+        ]
+
        [:body.px-4
         [:ul.flex.flex-col.gap-2.v-full.p-1
          notebook-cells
          (add-row-button)]
         #_[:script
-         {:type "text/javascript"
-          :src
-          "https://microsoft.github.io/monaco-editor/node_modules/monaco-editor/min/vs/loader.js"}]
+           {:type "text/javascript"
+            :src
+            "https://microsoft.github.io/monaco-editor/node_modules/monaco-editor/min/vs/loader.js"}]
         #_[:script
-         "const opts = {
+           "const opts = {
         language: 'clojure',
         lineNumbers: 'off',
         folding: false,
