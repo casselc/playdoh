@@ -11,6 +11,7 @@ RUN echo Downloading Clojure build deps && clojure -Srepro -Stree -T:build
 RUN echo Downloading Clojure app deps && clojure -Srepro -Stree 
 
 COPY src src/
+COPY resources resources/
 COPY build.clj .
 RUN clojure -Srepro -Sverbose -T:build ci :uber-file target/app.jar
 

@@ -1,5 +1,7 @@
 {:paths ["src" "resources"]
  :deps {org.clojure/clojure {:mvn/version "1.11.1"}
+        org.graalvm.js/js {:mvn/version "23.0.4"}
+        org.graalvm.js/js-scriptengine {:mvn/version "24.0.1"}
         ;; app deps
         org.clojure/tools.logging {:mvn/version "1.2.4"}
         org.slf4j/slf4j-jdk14 {:mvn/version "2.0.10"}

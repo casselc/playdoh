@@ -437,11 +437,11 @@
 
 (add-preparer!
  :kind/vega
- #'item/vega-embed)
+ #'item/vega-svg)
 
 (add-preparer!
  :kind/vega-lite
- #'item/vega-embed)
+ #'item/vega-lite-svg)
 
 (add-preparer-from-value-fn!
  :kind/video

@@ -7,8 +7,10 @@
    [dev.onionpancakes.chassis.core :as c]
    [dev.onionpancakes.chassis.compiler :as cc]
    [scicloj.kind-portal.v1.api :as kind-portal]
+   [casselc.playdoh.impl.darkstar :refer [vega-spec->svg vega-lite-spec->svg]]
    [casselc.playdoh.impl.clay.util.meta :as meta]
-   [casselc.playdoh.impl.clay.files :as files])
+   [casselc.playdoh.impl.clay.files :as files]
+   [clojure.tools.logging.readable :as logr])
   (:import (java.awt.image BufferedImage)
            (javax.imageio ImageIO)))
 
@@ -31,9 +33,9 @@
 (defn clojure-code-item [{:keys [tag hiccup-element md-class]}]
   (fn [string-or-strings]
     (let [strings (->> string-or-strings
-                       in-vector
+                       in-vector)]
                        ;; (map escape)
-                       )]
+                       
       {tag true
        :hiccup (cc/compile (->> strings
                                 (map (fn [s]
@@ -230,7 +232,7 @@
                   ".png")]
     (when-not
      (write! value "png" png-path)
-      (throw (ex-message "Failed to save image as PNG.")))
+     (throw (ex-message "Failed to save image as PNG.")))
     {:hiccup (cc/compile [:img {:src (-> png-path
                                          (string/replace
                                           (re-pattern (str "^"
@@ -239,6 +241,18 @@
                                           ""))}])
      :item-class "clay-image"}))
 
+
+(defn vega-svg 
+  [{:keys [value]}]
+  {:hiccup (cc/compile [:div
+                        (c/raw
+                         (vega-spec->svg (charred/write-json-str value)))])})
+
+(defn vega-lite-svg
+  [{:keys [value]}]
+  (logr/debugf  "Rendering %s" value)
+  {:hiccup [:div
+            (c/raw (vega-lite-spec->svg (charred/write-json-str value)))]})
 
 (defn vega-embed [{:keys [value
                           full-target-path
