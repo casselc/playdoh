@@ -57,4 +57,4 @@
   [ctx form-str]
   (logr/info "Evaluating:" form-str)
   (logr/trace "With context:" ctx)
-  (logr/spyf :debug "And result: %s" (sci/eval-string* ctx form-str)))
+  (logr/spyf "And result: %s" (sci/eval-string* ctx form-str)))

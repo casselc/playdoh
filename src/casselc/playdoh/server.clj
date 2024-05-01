@@ -71,9 +71,8 @@
 (defn new-session!
   []
   (let [id (str (random-uuid))]
-    (logr/info "Creating new session with id:" id)
-    (logr/spyf :info "\nSESSION:\n%s\n" (reset-session! id))
-    id))
+    (reset-session! id)
+    (logr/spyf :info "Created new session with id: %s" id) ))
 
 (defn get-session-id
   [{:keys [headers] :as _req}]
@@ -152,9 +151,7 @@
   [port]
   (if-let [server @running-server]
     server
-    (let [_ (future (sci/init))
-          server (reset! running-server (http/run-server #'router {:port port :legacy-return-value? false}))]
-      server)))
+    (reset! running-server (http/run-server #'router {:port port :legacy-return-value? false}))))
 
 (defn stop!
   []
