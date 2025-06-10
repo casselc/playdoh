@@ -1,5 +1,6 @@
 name: Deploy to Fly
 on: 
+ workflow_dispatch:
  push:
   branches:
     - main
