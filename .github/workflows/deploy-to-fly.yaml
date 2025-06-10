@@ -1,6 +1,11 @@
 name: Deploy to Fly
 on: 
  workflow_dispatch:
+  inputs:
+    ref:
+      description: 'Git reference to deploy'
+      required: true
+      type: string
  push:
   branches:
     - main
@@ -11,6 +16,8 @@ jobs:
     steps:
       # This step checks out a copy of your repository.
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
       - uses: superfly/flyctl-actions/setup-flyctl@master
       - run: flyctl deploy --remote-only
         env:
